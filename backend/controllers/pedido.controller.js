@@ -34,9 +34,11 @@ export async function getById(req, res) {
 }
 
 export async function updateEstado(req, res) {
-  const data = await pedidoService.updateEstadoAdmin(
+  const data = await pedidoService.updateEstado(
     Number(req.params.idPedido),
-    req.body.estado
+    req.body.estado,
+    req.user.idUsuario, // Pass idUsuario
+    req.user.rol // Pass rol
   );
   res.json({ ok: true, data });
 }

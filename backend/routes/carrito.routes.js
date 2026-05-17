@@ -29,3 +29,5 @@ carritoRouter.delete(
   validate({ params: carritoItemParamsSchema }),
   asyncHandler(carritoController.removeItem)
 );
+
+carritoRouter.delete("/vaciar", asyncHandler(carritoController.clear));

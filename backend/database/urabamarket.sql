@@ -9,7 +9,7 @@ CREATE TYPE tipo_rol AS ENUM ('Cliente', 'Vendedor', 'Proveedor', 'Administrador
 CREATE TYPE tipo_estado_carrito AS ENUM ('Activo', 'Comprado', 'Abandonado');
 CREATE TYPE tipo_estado_pedido AS ENUM ('Pendiente', 'Pagado', 'En Proceso', 'Completado', 'Cancelado');
 CREATE TYPE tipo_metodo_pago AS ENUM ('Tarjeta', 'Transferencia', 'Efectivo', 'PSE');
-CREATE TYPE tipo_estado_compra AS ENUM ('Pendiente', 'Recibido', 'Cancelado');
+CREATE TYPE tipo_estado_compra AS ENUM ('Pendiente', 'Aceptado', 'Rechazado', 'Enviado', 'Recibido', 'Cancelado');
 
 -- 2. CATEGORÍAS
 CREATE TABLE Categoria (
@@ -53,6 +53,7 @@ CREATE TABLE Tienda (
     idCategoria INT,
     nombre VARCHAR(150) NOT NULL,
     descripcion TEXT,
+    direccion VARCHAR(255), -- Nueva columna
     activo BOOLEAN DEFAULT TRUE,
     createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -60,7 +61,18 @@ CREATE TABLE Tienda (
     CONSTRAINT fk_categoria_tienda FOREIGN KEY (idCategoria) REFERENCES Categoria(idCategoria) ON DELETE SET NULL
 );
 
--- 6. PRODUCTOS
+-- 6. PROVEEDORES (Nueva tabla)
+CREATE TABLE Proveedor (
+    idProveedor SERIAL PRIMARY KEY,
+    idUsuario INT UNIQUE,
+    nombreEmpresa VARCHAR(150) NOT NULL,
+    productosQueDistribuye TEXT,
+    createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_usuario_proveedor FOREIGN KEY (idUsuario) REFERENCES Usuario(idUsuario) ON DELETE CASCADE
+);
+
+-- 7. PRODUCTOS (Numeración ajustada)
 CREATE TABLE Producto (
     idProducto SERIAL PRIMARY KEY,
     idTienda INT,
@@ -68,15 +80,56 @@ CREATE TABLE Producto (
     nombre VARCHAR(150) NOT NULL,
     descripcion TEXT,
     precio DECIMAL(12, 2) NOT NULL CHECK (precio >= 0),
+    precioCosto DECIMAL(12, 2),
     stock INT DEFAULT 0 CHECK (stock >= 0),
+    stockMinimo INT DEFAULT 0 CHECK (stockMinimo >= 0),
+    marca VARCHAR(100),
+    iva DECIMAL(5,2),
+    fechaVencimiento DATE,
+    idProveedor INT,
+    idProductoMayorista INT,
+    promociones VARCHAR(255),
+    descuento DECIMAL(5,2),
+    vendidosTotales INT DEFAULT 0 CHECK (vendidosTotales >= 0),
     visitas INT DEFAULT 0,
     imagenPrincipal VARCHAR(255),
     activo BOOLEAN DEFAULT TRUE,
     createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_tienda_producto FOREIGN KEY (idTienda) REFERENCES Tienda(idTienda) ON DELETE CASCADE,
-    CONSTRAINT fk_categoria_producto FOREIGN KEY (idCategoria) REFERENCES Categoria(idCategoria) ON DELETE SET NULL
+    CONSTRAINT fk_categoria_producto FOREIGN KEY (idCategoria) REFERENCES Categoria(idCategoria) ON DELETE SET NULL,
+    CONSTRAINT fk_proveedor_producto FOREIGN KEY (idProveedor) REFERENCES Proveedor(idProveedor) ON DELETE SET NULL
 );
+
+CREATE TABLE ProductoMayorista (
+    idProductoMayorista SERIAL PRIMARY KEY,
+    idProveedor INT NOT NULL,
+    idCategoria INT,
+    nombre VARCHAR(150) NOT NULL,
+    descripcion TEXT,
+    precioMayorista DECIMAL(12, 2) NOT NULL CHECK (precioMayorista >= 0),
+    stockMayorista INT DEFAULT 0 CHECK (stockMayorista >= 0),
+    marca VARCHAR(100),
+    ivaMayorista DECIMAL(5,2),
+    fechaVencimiento DATE,
+    imagenPrincipal VARCHAR(255),
+    tipoProducto VARCHAR(30) DEFAULT 'General',
+    lote VARCHAR(80),
+    fechaFabricacion DATE,
+    garantiaMeses INT CHECK (garantiaMeses IS NULL OR garantiaMeses >= 0),
+    vidaUtilMeses INT CHECK (vidaUtilMeses IS NULL OR vidaUtilMeses >= 0),
+    modelo VARCHAR(120),
+    compatibilidad VARCHAR(255),
+    numeroSerie VARCHAR(120),
+    activo BOOLEAN DEFAULT TRUE,
+    createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_proveedor_prod_mayorista FOREIGN KEY (idProveedor) REFERENCES Proveedor(idProveedor) ON DELETE CASCADE,
+    CONSTRAINT fk_categoria_prod_mayorista FOREIGN KEY (idCategoria) REFERENCES Categoria(idCategoria) ON DELETE SET NULL
+);
+
+ALTER TABLE Producto
+    ADD CONSTRAINT fk_prod_mayorista_prod FOREIGN KEY (idProductoMayorista) REFERENCES ProductoMayorista(idProductoMayorista) ON DELETE SET NULL;
 
 -- 7. CARRITOS
 CREATE TABLE Carrito (
@@ -119,6 +172,8 @@ CREATE TABLE DetallePedido (
     idTienda INT,
     cantidad INT NOT NULL CHECK (cantidad > 0),
     precioUnitario DECIMAL(12, 2) NOT NULL CHECK (precioUnitario >= 0),
+    costoUnitario DECIMAL(12, 2),
+    ganancia DECIMAL(12, 2),
     CONSTRAINT fk_pedido_detalle FOREIGN KEY (idPedido) REFERENCES Pedido(idPedido) ON DELETE CASCADE,
     CONSTRAINT fk_producto_detalle FOREIGN KEY (idProducto) REFERENCES Producto(idProducto) ON DELETE RESTRICT,
     CONSTRAINT fk_tienda_detalle FOREIGN KEY (idTienda) REFERENCES Tienda(idTienda)
@@ -139,12 +194,11 @@ CREATE TABLE CompraProveedor (
 CREATE TABLE DetalleCompraProveedor (
     idDetalleCompra SERIAL PRIMARY KEY,
     idCompra INT,
-    idProductoVinculado INT NULL,
-    nombreItem VARCHAR(150),
+    idProductoMayorista INT,
     cantidad INT NOT NULL CHECK (cantidad > 0),
     precioMayoreo DECIMAL(12, 2) NOT NULL CHECK (precioMayoreo >= 0),
     CONSTRAINT fk_compra_detalle_prov FOREIGN KEY (idCompra) REFERENCES CompraProveedor(idCompra) ON DELETE CASCADE,
-    CONSTRAINT fk_prod_vinculado_prov FOREIGN KEY (idProductoVinculado) REFERENCES Producto(idProducto) ON DELETE SET NULL
+    CONSTRAINT fk_prod_mayorista_detalle_compra FOREIGN KEY (idProductoMayorista) REFERENCES ProductoMayorista(idProductoMayorista) ON DELETE RESTRICT
 );
 
 -- 11. RESEÑAS

@@ -3,18 +3,37 @@ import { carritoModel } from "../models/carrito.model.js";
 import { direccionModel } from "../models/direccion.model.js";
 import { pedidoModel } from "../models/pedido.model.js";
 import { productoModel } from "../models/producto.model.js";
+import { tiendaModel } from "../models/tienda.model.js";
 import { ApiError } from "../utils/ApiError.js";
-import { mapDetallePedido, mapPedido } from "../utils/mappers.js";
+import { mapDetallePedido, mapDireccion, mapPedido } from "../utils/mappers.js";
+
+function getProductoPrecio(producto) {
+  return Number(producto?.precio ?? producto?.precioventa ?? 0);
+}
+
+function totalsForDetalles(detalles) {
+  const total = detalles.reduce(
+    (sum, item) => sum + Number(item.precioUnitario ?? 0) * Number(item.cantidad ?? 0),
+    0
+  );
+  const subtotal = Math.round(total / 1.19);
+  const iva = total - subtotal;
+  return {
+    subtotal,
+    iva,
+    total
+  };
+}
 
 export async function checkout(idUsuario, idDireccionEnvio) {
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
-    const carrito = await carritoModel.findActivoByUsuario(idUsuario, client);
+    const carrito = await carritoModel.findActivoByUsuarioForUpdate(idUsuario, client);
     if (!carrito) {
       throw new ApiError.BadRequest("No hay carrito activo");
     }
-    const items = await carritoModel.listItems(carrito.idcarrito, client);
+    const items = await carritoModel.listItemsForUpdate(carrito.idcarrito, client);
     if (!items.length) {
       throw new ApiError.BadRequest("El carrito esta vacio");
     }
@@ -22,46 +41,65 @@ export async function checkout(idUsuario, idDireccionEnvio) {
     if (!dir || dir.idusuario !== idUsuario) {
       throw new ApiError.BadRequest("Direccion de envio invalida");
     }
+    const productosValidados = [];
     let total = 0;
     for (const it of items) {
-      const prod = await productoModel.findById(it.idproducto, client);
+      if (!Number.isInteger(Number(it.cantidad)) || Number(it.cantidad) <= 0) {
+        throw new ApiError.BadRequest("Hay productos con cantidades invalidas en el carrito");
+      }
+
+      const prod = await productoModel.findByIdForUpdate(it.idproducto, client);
       if (!prod || !prod.activo) {
         throw new ApiError.BadRequest(`Producto ${it.idproducto} no disponible`);
       }
       if (prod.stock < it.cantidad) {
-        throw new ApiError.BadRequest(`Stock insuficiente: ${prod.nombre}`);
+        throw new ApiError.BadRequest(`Stock insuficiente para ${prod.nombre}. Disponible: ${prod.stock}`);
       }
-      total += Number(it.preciofijado) * it.cantidad;
+      const precioActual = getProductoPrecio(prod);
+      if (precioActual < 0) {
+        throw new ApiError.BadRequest(`Precio invalido para ${prod.nombre}`);
+      }
+      await carritoModel.updateItemPrice(carrito.idcarrito, it.idproducto, precioActual, client);
+      total += precioActual * Number(it.cantidad);
+      productosValidados.push({ item: it, producto: prod, precioActual });
     }
+    if (total <= 0) {
+      throw new ApiError.BadRequest("El total del pedido debe ser mayor a cero");
+    }
+
     const pedidoRow = await pedidoModel.create(
       { idUsuario, idDireccionEnvio, total },
       client
     );
     const idPedido = pedidoRow.idpedido;
-    for (const it of items) {
-      const prod = await productoModel.findById(it.idproducto, client);
+    for (const { item, producto, precioActual } of productosValidados) {
       await pedidoModel.addDetalle(
         {
           idPedido,
-          idProducto: it.idproducto,
-          idTienda: prod.idtienda,
-          cantidad: it.cantidad,
-          precioUnitario: it.preciofijado
+          idProducto: item.idproducto,
+          idTienda: producto.idtienda,
+          cantidad: item.cantidad,
+          precioUnitario: precioActual
         },
         client
       );
-      const updated = await productoModel.adjustStock(it.idproducto, -it.cantidad, client);
+      const updated = await productoModel.adjustStock(item.idproducto, -Number(item.cantidad), client);
       if (!updated) {
-        throw new ApiError.BadRequest(`No se pudo descontar stock del producto ${it.idproducto}`);
+        throw new ApiError.BadRequest(`No se pudo descontar stock del producto ${producto.nombre}`);
       }
     }
     await carritoModel.updateEstado(carrito.idcarrito, "Comprado", client);
     await client.query("COMMIT");
     const p = await pedidoModel.findById(idPedido, pool);
-    const detalles = await pedidoModel.listDetalle(idPedido, pool);
+    const detallesRaw = await pedidoModel.listDetalle(idPedido, pool);
+    const detalles = detallesRaw.map(mapDetallePedido);
+    const direccion = p.iddireccionenvio ? await direccionModel.findById(p.iddireccionenvio) : null;
     return {
       pedido: mapPedido(p),
-      detalles: detalles.map(mapDetallePedido)
+      detalles,
+      direccion: mapDireccion(direccion),
+      metodoPago: "Pago contra entrega",
+      resumen: totalsForDetalles(detalles)
     };
   } catch (e) {
     await client.query("ROLLBACK");
@@ -90,10 +128,15 @@ export async function getById(idUsuario, idPedido, { esAdmin = false, idTiendaVe
   } else {
     throw new ApiError.Forbidden("No puedes ver este pedido");
   }
-  const detalles = await pedidoModel.listDetalle(idPedido);
+  const detallesRaw = await pedidoModel.listDetalle(idPedido);
+  const detalles = detallesRaw.map(mapDetallePedido);
+  const direccion = p.iddireccionenvio ? await direccionModel.findById(p.iddireccionenvio) : null;
   return {
     pedido: mapPedido(p),
-    detalles: detalles.map(mapDetallePedido)
+    detalles,
+    direccion: mapDireccion(direccion),
+    metodoPago: "Pago contra entrega",
+    resumen: totalsForDetalles(detalles)
   };
 }
 
@@ -102,8 +145,23 @@ export async function listForTienda(idTienda) {
   return rows.map(mapPedido);
 }
 
-export async function updateEstadoAdmin(idPedido, estado) {
-  const row = await pedidoModel.updateEstado(idPedido, estado);
+export async function updateEstado(idPedido, estado, idUsuario, rol) {
+  const row = await pedidoModel.findById(idPedido);
   if (!row) throw new ApiError.NotFound("Pedido no encontrado");
-  return mapPedido(row);
+
+  if (rol === "Vendedor") {
+    const tienda = await tiendaModel.findByUsuario(idUsuario);
+    if (!tienda) {
+      throw new ApiError.Forbidden("No tienes una tienda asociada");
+    }
+    const detalles = await pedidoModel.listDetalle(idPedido);
+    const pertenece = detalles.some((d) => d.idtienda === tienda.idtienda);
+    if (!pertenece) {
+      throw new ApiError.Forbidden("No puedes actualizar el estado de este pedido");
+    }
+  }
+
+  const updatedRow = await pedidoModel.updateEstado(idPedido, estado);
+  if (!updatedRow) throw new ApiError.NotFound("Pedido no encontrado");
+  return mapPedido(updatedRow);
 }

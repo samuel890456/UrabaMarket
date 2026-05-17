@@ -11,6 +11,17 @@ export const carritoModel = {
     return rows[0] ?? null;
   },
 
+  async findActivoByUsuarioForUpdate(idUsuario, db = pool) {
+    const { rows } = await db.query(
+      `SELECT * FROM carrito
+       WHERE idusuario = $1 AND estado = 'Activo'::tipo_estado_carrito
+       ORDER BY idcarrito DESC LIMIT 1
+       FOR UPDATE`,
+      [idUsuario]
+    );
+    return rows[0] ?? null;
+  },
+
   async createActivo(idUsuario, db = pool) {
     const { rows } = await db.query(
       `INSERT INTO carrito (idusuario, estado)
@@ -35,8 +46,34 @@ export const carritoModel = {
   },
 
   async listItems(idCarrito, db = pool) {
-    const { rows } = await db.query(`SELECT * FROM itemcarrito WHERE idcarrito = $1`, [idCarrito]);
+    const { rows } = await db.query(
+      `SELECT * FROM itemcarrito WHERE idcarrito = $1 ORDER BY iditem ASC`,
+      [idCarrito]
+    );
     return rows;
+  },
+
+  async listItemsForUpdate(idCarrito, db = pool) {
+    const { rows } = await db.query(
+      `SELECT * FROM itemcarrito WHERE idcarrito = $1 ORDER BY iditem ASC FOR UPDATE`,
+      [idCarrito]
+    );
+    return rows;
+  },
+
+  async findItem(idCarrito, idProducto, db = pool) {
+    const { rows } = await db.query(
+      `SELECT * FROM itemcarrito WHERE idcarrito = $1 AND idproducto = $2`,
+      [idCarrito, idProducto]
+    );
+    return rows[0] ?? null;
+  },
+
+  async updateItemPrice(idCarrito, idProducto, precioFijado, db = pool) {
+    await db.query(
+      `UPDATE itemcarrito SET preciofijado = $3 WHERE idcarrito = $1 AND idproducto = $2`,
+      [idCarrito, idProducto, precioFijado]
+    );
   },
 
   async upsertItem({ idCarrito, idProducto, cantidad, precioFijado, sumarCantidad }, db = pool) {
@@ -66,5 +103,9 @@ export const carritoModel = {
       idCarrito,
       idProducto
     ]);
+  },
+
+  async clearItems(idCarrito, db = pool) {
+    await db.query(`DELETE FROM itemcarrito WHERE idcarrito = $1`, [idCarrito]);
   }
 };

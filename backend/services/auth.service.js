@@ -1,11 +1,16 @@
 import bcrypt from "bcrypt";
+import { pool } from "../config/database.js";
 import { env } from "../config/env.js";
 import { usuarioModel } from "../models/usuario.model.js";
+import { tiendaModel } from "../models/tienda.model.js"; // Importar tiendaModel
+import { proveedorModel } from "../models/proveedor.model.js"; // Importar proveedorModel
 import { ApiError } from "../utils/ApiError.js";
 import { mapUsuario } from "../utils/mappers.js";
 import { signUserToken } from "../utils/jwt.js";
 
-export async function register({ nombre, email, password, telefono, rol }) {
+export async function register(body) { // Accept full body
+  const { rol, email, password, telefono } = body;
+
   if (rol === "Administrador") {
     throw new ApiError.Forbidden("No puedes registrarte como administrador");
   }
@@ -13,21 +18,66 @@ export async function register({ nombre, email, password, telefono, rol }) {
   if (exists) {
     throw new ApiError.Conflict("El email ya esta registrado");
   }
+
+  let nombreParaUsuario;
+  if (rol === "Proveedor") {
+    nombreParaUsuario = body.responsable;
+  } else {
+    nombreParaUsuario = body.nombre;
+  }
+
   const passwordHash = await bcrypt.hash(password, env.BCRYPT_ROUNDS);
-  const row = await usuarioModel.create({
-    nombre,
-    email,
-    password: passwordHash,
-    telefono: telefono ?? null,
-    rol
-  });
-  const user = mapUsuario(row);
-  const token = signUserToken({
-    idUsuario: user.idUsuario,
-    email: user.email,
-    rol: user.rol
-  });
-  return { user, token };
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    const row = await usuarioModel.create({
+      nombre: nombreParaUsuario, // Use the mapped name
+      email,
+      password: passwordHash,
+      telefono: telefono ?? null,
+      rol
+    }, client);
+    const user = mapUsuario(row);
+
+    if (rol === "Vendedor") {
+      const { nombreTienda, categoriaTienda, direccionTienda } = body;
+      const idCategoria = categoriaTienda != null ? Number(categoriaTienda) : null;
+      if (idCategoria != null && Number.isNaN(idCategoria)) {
+        throw new ApiError.BadRequest("Categoría inválida");
+      }
+      await tiendaModel.create({
+        idUsuario: user.idUsuario,
+        idCategoria,
+        nombre: nombreTienda,
+        descripcion: null, // No se recoge en el formulario, asumimos null o vacío
+        direccion: direccionTienda,
+      }, client);
+    } else if (rol === "Proveedor") {
+      const { nombreEmpresa, productosQueDistribuye } = body;
+      await proveedorModel.create({
+        idUsuario: user.idUsuario,
+        nombreEmpresa,
+        productosQueDistribuye,
+      }, client);
+    }
+
+    await client.query("COMMIT");
+    const token = signUserToken({
+      idUsuario: user.idUsuario,
+      email: user.email,
+      rol: user.rol
+    });
+    return { user, token };
+  } catch (error) {
+    await client.query("ROLLBACK");
+    if (error.code === "23505") {
+      throw new ApiError.Conflict("El email o registro asociado ya existe");
+    }
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 export async function login({ email, password }) {

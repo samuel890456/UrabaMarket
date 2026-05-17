@@ -10,6 +10,11 @@ const idTiendaParamsSchema = z.object({
   idTienda: z.coerce.number().int().positive()
 });
 
+const financialSummaryQuerySchema = z.object({
+  fechaInicio: z.preprocess((v) => (v === "" ? undefined : v), z.string().optional()),
+  fechaFin: z.preprocess((v) => (v === "" ? undefined : v), z.string().optional())
+});
+
 export const tiendaRouter = Router();
 
 tiendaRouter.get("/", validate({ query: listTiendasQuerySchema }), asyncHandler(tiendaController.listPublic));
@@ -19,6 +24,14 @@ tiendaRouter.get(
   authenticate,
   authorize("Vendedor"),
   asyncHandler(tiendaController.getMine)
+);
+
+tiendaRouter.get(
+  "/mine/financial-summary",
+  authenticate,
+  authorize("Vendedor"),
+  validate({ query: financialSummaryQuerySchema }),
+  asyncHandler(tiendaController.getFinancialSummary)
 );
 
 tiendaRouter.post(

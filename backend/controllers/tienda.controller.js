@@ -33,3 +33,9 @@ export async function updateAdmin(req, res) {
   const data = await tiendaService.updateByAdmin(Number(req.params.idTienda), req.body);
   res.json({ ok: true, data });
 }
+
+export async function getFinancialSummary(req, res) {
+  const { fechaInicio, fechaFin } = req.query;
+  const data = await tiendaService.getOwnFinancialSummary(req.user.idUsuario, { fechaInicio, fechaFin });
+  res.json({ ok: true, data });
+}

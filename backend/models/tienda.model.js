@@ -34,12 +34,12 @@ export const tiendaModel = {
     return { rows, total: c[0]?.n ?? 0 };
   },
 
-  async create({ idUsuario, idCategoria, nombre, descripcion, activo = true }, db = pool) {
+  async create({ idUsuario, idCategoria, nombre, descripcion, direccion, activo = true }, db = pool) {
     const { rows } = await db.query(
-      `INSERT INTO tienda (idusuario, idcategoria, nombre, descripcion, activo)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO tienda (idusuario, idcategoria, nombre, descripcion, direccion, activo)
+       VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING *`,
-      [idUsuario, idCategoria ?? null, nombre, descripcion ?? null, activo]
+      [idUsuario, idCategoria ?? null, nombre, descripcion ?? null, direccion ?? null, activo]
     );
     return rows[0];
   },
@@ -59,6 +59,10 @@ export const tiendaModel = {
     if (data.descripcion !== undefined) {
       vals.push(data.descripcion);
       fields.push(`descripcion = $${i++}`);
+    }
+    if (data.direccion !== undefined) { // New field
+      vals.push(data.direccion);
+      fields.push(`direccion = $${i++}`);
     }
     if (data.activo != null) {
       vals.push(data.activo);

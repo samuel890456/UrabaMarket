@@ -23,3 +23,8 @@ export async function removeItem(req, res) {
   const data = await carritoService.removeItem(req.user.idUsuario, Number(req.params.idProducto));
   res.json({ ok: true, data });
 }
+
+export async function clear(req, res) {
+  const data = await carritoService.clearCart(req.user.idUsuario);
+  res.json({ ok: true, data });
+}

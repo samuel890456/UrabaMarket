@@ -11,6 +11,8 @@ import { productoRouter } from "./producto.routes.js";
 import { resenaRouter } from "./resena.routes.js";
 import { tiendaRouter } from "./tienda.routes.js";
 import { usuarioRouter } from "./usuario.routes.js";
+import { uploadRouter } from "./upload.routes.js";
+import { proveedorRouter } from "./proveedor.routes.js"; // New Import
 
 export const apiRouter = Router();
 
@@ -28,8 +30,10 @@ apiRouter.use("/categorias", categoriaRouter);
 apiRouter.use("/direcciones", direccionRouter);
 apiRouter.use("/tiendas", tiendaRouter);
 apiRouter.use("/productos", productoRouter);
+apiRouter.use("/uploads", uploadRouter);
 apiRouter.use("/carrito", carritoRouter);
 apiRouter.use("/pedidos", pedidoRouter);
 apiRouter.use("/compras-proveedor", compraProveedorRouter);
 apiRouter.use("/resenas", resenaRouter);
+apiRouter.use("/proveedores", proveedorRouter); // New Registration
 apiRouter.use("/admin", adminRouter);

@@ -23,11 +23,12 @@ export function authenticate(req, _res, next) {
 }
 
 export function authorize(...roles) {
+  const allowedRoles = roles.flat();
   return (req, _res, next) => {
     if (!req.user) {
       return next(new ApiError.Unauthorized());
     }
-    if (!roles.length || roles.includes(req.user.rol)) {
+    if (!allowedRoles.length || allowedRoles.includes(req.user.rol)) {
       return next();
     }
     return next(new ApiError.Forbidden("No tienes permiso para esta accion"));

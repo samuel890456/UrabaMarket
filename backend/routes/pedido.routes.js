@@ -34,7 +34,7 @@ pedidoRouter.get(
 pedidoRouter.patch(
   "/:idPedido/estado",
   authenticate,
-  authorize("Administrador"),
+  authorize(["Administrador", "Vendedor"]),
   validate({ params: idPedidoParamsSchema, body: pedidoEstadoSchema }),
   asyncHandler(pedidoController.updateEstado)
 );

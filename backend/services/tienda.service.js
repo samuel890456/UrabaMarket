@@ -1,4 +1,5 @@
 import { tiendaModel } from "../models/tienda.model.js";
+import { pedidoModel } from "../models/pedido.model.js"; // New import
 import { ApiError } from "../utils/ApiError.js";
 import { mapTienda } from "../utils/mappers.js";
 import { paginationMeta, parsePagination } from "../utils/pagination.js";
@@ -47,4 +48,17 @@ export async function updateByAdmin(idTienda, data) {
   const updated = await tiendaModel.update(idTienda, data);
   if (!updated) throw new ApiError.NotFound("Tienda no encontrada");
   return mapTienda(updated);
+}
+
+export async function getOwnFinancialSummary(idUsuario, { fechaInicio, fechaFin } = {}) {
+  const tienda = await tiendaModel.findByUsuario(idUsuario);
+  if (!tienda) {
+    throw new ApiError.Forbidden("No tienes una tienda asociada para obtener un resumen financiero.");
+  }
+  const summary = await pedidoModel.getStoreFinancialSummary(tienda.idtienda, { fechaInicio, fechaFin });
+  return {
+    totalVentasCount: Number(summary.total_ventas_count),
+    totalIngresos: Number(summary.total_ingresos),
+    totalGanancias: Number(summary.total_ganancias)
+  };
 }

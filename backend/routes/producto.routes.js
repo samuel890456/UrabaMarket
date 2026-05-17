@@ -15,6 +15,10 @@ const idTiendaParamsSchema = z.object({
   idTienda: z.coerce.number().int().positive()
 });
 
+const daysQuerySchema = z.object({
+  days: z.coerce.number().int().positive().optional()
+});
+
 export const productoRouter = Router();
 
 productoRouter.get(
@@ -35,6 +39,29 @@ productoRouter.get(
   authorize("Vendedor"),
   asyncHandler(productoController.listMine)
 );
+
+productoRouter.get(
+  "/low-stock",
+  authenticate,
+  authorize("Vendedor"),
+  asyncHandler(productoController.listLowStock)
+);
+
+productoRouter.get(
+  "/expired",
+  authenticate,
+  authorize("Vendedor"),
+  asyncHandler(productoController.listExpired)
+);
+
+productoRouter.get(
+  "/soon-to-expire",
+  authenticate,
+  authorize("Vendedor"),
+  validate({ query: daysQuerySchema }),
+  asyncHandler(productoController.listSoonToExpire)
+);
+
 
 productoRouter.get(
   "/:idProducto",

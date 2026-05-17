@@ -43,3 +43,19 @@ export async function remove(req, res) {
   const data = await productoService.removeOwn(req.user.idUsuario, Number(req.params.idProducto));
   res.json({ ok: true, data });
 }
+
+export async function listLowStock(req, res) {
+  const data = await productoService.listLowStockProductsForSeller(req.user.idUsuario);
+  res.json({ ok: true, data });
+}
+
+export async function listExpired(req, res) {
+  const data = await productoService.listExpiredProductsForSeller(req.user.idUsuario);
+  res.json({ ok: true, data });
+}
+
+export async function listSoonToExpire(req, res) {
+  const days = req.query.days ? Number(req.query.days) : undefined;
+  const data = await productoService.listSoonToExpireProductsForSeller(req.user.idUsuario, days);
+  res.json({ ok: true, data });
+}
