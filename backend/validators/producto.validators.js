@@ -24,6 +24,8 @@ export const productoUpdateSchema = productoCreateSchema.partial();
 export const productoSearchQuerySchema = z.object({
   q: z.string().optional(),
   idCategoria: z.coerce.number().int().positive().optional(),
+  idTienda: z.coerce.number().int().positive().optional(),
+  idProveedor: z.coerce.number().int().positive().optional(),
   marca: z.string().optional(),
   minPrecio: z.coerce.number().nonnegative().optional(),
   maxPrecio: z.coerce.number().nonnegative().optional(),

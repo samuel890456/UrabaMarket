@@ -176,5 +176,5 @@ export async function getSupplierOrderById(idCompra, idUsuarioProveedor) {
 }
 
 export async function updateSupplierOrderStatus(idCompra, estado, idUsuarioProveedor) {
-  return compraProveedorService.updateEstado(idCompra, estado, idUsuarioProveedor, { rol: "Proveedor" });
+  return compraProveedorService.updateEstado(idCompra, estado, idUsuarioProveedor, { roles: ["Proveedor"] });
 }

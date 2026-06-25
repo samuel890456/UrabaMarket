@@ -14,7 +14,7 @@ export function authenticate(req, _res, next) {
     req.user = {
       idUsuario: typeof sub === "string" ? Number(sub) : sub,
       email: payload.email,
-      rol: payload.rol
+      roles: Array.isArray(payload.roles) ? payload.roles : payload.rol ? [payload.rol] : []
     };
     next();
   } catch {
@@ -28,9 +28,18 @@ export function authorize(...roles) {
     if (!req.user) {
       return next(new ApiError.Unauthorized());
     }
-    if (!allowedRoles.length || allowedRoles.includes(req.user.rol)) {
+    const userRoles = Array.isArray(req.user.roles) ? req.user.roles : [];
+    if (!allowedRoles.length || allowedRoles.some((role) => userRoles.includes(role))) {
       return next();
     }
     return next(new ApiError.Forbidden("No tienes permiso para esta accion"));
   };
+}
+
+export function hasRole(user, role) {
+  return Boolean(user?.roles?.includes(role));
+}
+
+export function hasAnyRole(user, roles = []) {
+  return roles.some((role) => hasRole(user, role));
 }

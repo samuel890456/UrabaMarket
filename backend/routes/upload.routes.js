@@ -1,8 +1,8 @@
 import { Router } from "express";
 import { authenticate, authorize } from "../middlewares/auth.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { productoImageUpload } from "../utils/upload.js";
-import { uploadProductoImagen } from "../controllers/upload.controller.js";
+import { avatarImageUpload, productoImageUpload, tiendaImageUpload } from "../utils/upload.js";
+import { uploadAvatarImagen, uploadProductoImagen, uploadTiendaImagen } from "../controllers/upload.controller.js";
 
 export const uploadRouter = Router();
 
@@ -13,4 +13,19 @@ uploadRouter.post(
   authorize("Vendedor", "Proveedor"),
   productoImageUpload.single("file"),
   asyncHandler(uploadProductoImagen)
+);
+
+uploadRouter.post(
+  "/avatar",
+  authenticate,
+  avatarImageUpload.single("file"),
+  asyncHandler(uploadAvatarImagen)
+);
+
+uploadRouter.post(
+  "/tiendas",
+  authenticate,
+  authorize("Vendedor"),
+  tiendaImageUpload.single("file"),
+  asyncHandler(uploadTiendaImagen)
 );

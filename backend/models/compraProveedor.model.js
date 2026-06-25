@@ -11,6 +11,19 @@ export const compraProveedorModel = {
     return rows[0];
   },
 
+  async findOpenByTiendaAndProveedor(idTienda, idUsuarioProveedor, db = pool) {
+    const { rows } = await db.query(
+      `SELECT * FROM compraproveedor
+       WHERE idtienda = $1
+         AND idusuarioproveedor = $2
+         AND estado IN ('Pendiente'::tipo_estado_compra, 'Aceptado'::tipo_estado_compra, 'Enviado'::tipo_estado_compra)
+       ORDER BY fecha DESC
+       LIMIT 1`,
+      [idTienda, idUsuarioProveedor]
+    );
+    return rows[0] ?? null;
+  },
+
   // Modified addDetalle to use idProductoMayorista
   async addDetalle({ idCompra, idProductoMayorista, cantidad, precioMayoreo }, db = pool) {
     await db.query(
@@ -47,6 +60,7 @@ export const compraProveedorModel = {
     const { rows } = await db.query(
       `SELECT
           cp.*,
+          p.idproveedor,
           p.nombreempresa AS nombre_proveedor,
           u.email AS email_proveedor
        FROM compraproveedor cp

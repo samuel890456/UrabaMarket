@@ -5,10 +5,10 @@ export function signToken(payload) {
   return jwt.sign(payload, env.JWT_SECRET, { expiresIn: env.JWT_EXPIRES_IN });
 }
 
-export function signUserToken({ idUsuario, email, rol }) {
+export function signUserToken({ idUsuario, email, roles = [] }) {
   return signToken({
     sub: idUsuario,
     email,
-    rol
+    roles
   });
 }

@@ -6,6 +6,14 @@ export const productoMayoristaModel = {
     return rows[0] ?? null;
   },
 
+  async findByIdForUpdate(idProductoMayorista, db = pool) {
+    const { rows } = await db.query(
+      `SELECT * FROM productomayorista WHERE idproductomayorista = $1 FOR UPDATE`,
+      [idProductoMayorista]
+    );
+    return rows[0] ?? null;
+  },
+
   async listByProveedor(idProveedor, { activo = true } = {}, db = pool) {
     const { rows } = await db.query(
       activo

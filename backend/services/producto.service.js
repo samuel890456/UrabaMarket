@@ -9,6 +9,8 @@ export async function search(query) {
   const { page, limit, offset } = parsePagination(query);
   const q = query.q?.trim() || null;
   const idCategoria = query.idCategoria ? Number(query.idCategoria) : null;
+  const idTienda = query.idTienda ? Number(query.idTienda) : null;
+  const idProveedor = query.idProveedor ? Number(query.idProveedor) : null;
   const marca = query.marca?.trim() || null;
   const minPrecio = query.minPrecio ? Number(query.minPrecio) : null;
   const maxPrecio = query.maxPrecio ? Number(query.maxPrecio) : null;
@@ -18,6 +20,8 @@ export async function search(query) {
   const { rows, total } = await productoModel.search({
     q,
     idCategoria,
+    idTienda,
+    idProveedor,
     marca,
     minPrecio,
     maxPrecio,
@@ -62,9 +66,10 @@ export async function createForTienda(idUsuario, data) {
   if (!tienda) {
     throw new ApiError.BadRequest("Debes tener una tienda para crear productos");
   }
+  const clean = { ...data, stock: 0 };
   const row = await productoModel.create({
     idTienda: tienda.idtienda,
-    ...data
+    ...clean
   });
   return mapProducto(row);
 }
@@ -76,7 +81,8 @@ export async function updateOwn(idUsuario, idProducto, data) {
   if (!prod || prod.idtienda !== tienda.idtienda) {
     throw new ApiError.NotFound("Producto no encontrado");
   }
-  const row = await productoModel.update(idProducto, data);
+  const { stock, vendidosTotales, ...safeData } = data;
+  const row = await productoModel.update(idProducto, safeData);
   return mapProducto(row);
 }
 

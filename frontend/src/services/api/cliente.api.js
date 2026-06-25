@@ -10,6 +10,13 @@ export async function patchMe(body) {
   return data.data;
 }
 
+export async function uploadAvatar(file) {
+  const form = new FormData();
+  form.append("file", file);
+  const { data } = await httpClient.post("/uploads/avatar", form);
+  return data.data;
+}
+
 export async function getDirecciones() {
   const { data } = await httpClient.get("/direcciones");
   return data.data;
@@ -37,6 +44,11 @@ export async function patchCarritoItem(idProducto, body) {
 
 export async function deleteCarritoItem(idProducto) {
   const { data } = await httpClient.delete(`/carrito/items/${idProducto}`);
+  return data.data;
+}
+
+export async function clearCarrito() {
+  const { data } = await httpClient.delete("/carrito/vaciar");
   return data.data;
 }
 

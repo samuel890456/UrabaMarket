@@ -7,7 +7,7 @@ export async function getCategorias() {
 
 export async function getTiendas(params = {}) {
   const { data } = await httpClient.get("/tiendas", { params });
-  return data.data;
+  return data.data || { items: [], meta: { page: 1, limit: params.limit ?? 20, total: 0, totalPages: 0 } };
 }
 
 export async function getTienda(idTienda) {

@@ -31,11 +31,15 @@ export const navVendedor = [
   { to: "/vendedor", label: "Dashboard", icon: LayoutDashboard },
   { to: "/vendedor/tienda", label: "Mi tienda", icon: Store },
   { to: "/vendedor/productos", label: "Productos", icon: ShoppingBag },
-  { to: "/vendedor/ventas", label: "Ventas", icon: BarChart3 }
+  { to: "/vendedor/abastecimiento", label: "Abastecimiento", icon: Truck },
+  { to: "/vendedor/inventario", label: "Inventario", icon: Package },
+  { to: "/vendedor/ventas", label: "Ventas", icon: BarChart3 },
+  { to: "/vendedor/resumen-financiero", label: "Finanzas", icon: BarChart3 }
 ];
 
 export const navProveedor = [
   { to: "/proveedor", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/proveedor/catalogo", label: "Catálogo", icon: ShoppingBag },
   { to: "/proveedor/compras-b2b", label: "Solicitudes B2B", icon: Truck }
 ];
 

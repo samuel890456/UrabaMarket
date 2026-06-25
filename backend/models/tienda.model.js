@@ -11,13 +11,18 @@ export const tiendaModel = {
     return rows[0] ?? null;
   },
 
-  async listPublic({ limit, offset, idCategoria = null }, db = pool) {
+  async listPublic({ limit, offset, idCategoria = null, q = null }, db = pool) {
     const params = [];
     let n = 1;
     let where = `WHERE activo = TRUE`;
     if (idCategoria) {
       params.push(idCategoria);
       where += ` AND idcategoria = $${n++}`;
+    }
+    if (q) {
+      params.push(`%${q.toLowerCase()}%`);
+      where += ` AND (LOWER(nombre) LIKE $${n} OR LOWER(COALESCE(descripcion, '')) LIKE $${n} OR LOWER(COALESCE(direccion, '')) LIKE $${n})`;
+      n += 1;
     }
     params.push(limit, offset);
     const lim = n;
@@ -26,20 +31,30 @@ export const tiendaModel = {
       `SELECT * FROM tienda ${where} ORDER BY idtienda DESC LIMIT $${lim} OFFSET $${off}`,
       params
     );
-    const countParams = idCategoria ? [idCategoria] : [];
+    const countParams = [];
+    let countWhere = `WHERE activo = TRUE`;
+    let countN = 1;
+    if (idCategoria) {
+      countParams.push(idCategoria);
+      countWhere += ` AND idcategoria = $${countN++}`;
+    }
+    if (q) {
+      countParams.push(`%${q.toLowerCase()}%`);
+      countWhere += ` AND (LOWER(nombre) LIKE $${countN} OR LOWER(COALESCE(descripcion, '')) LIKE $${countN} OR LOWER(COALESCE(direccion, '')) LIKE $${countN})`;
+    }
     const { rows: c } = await db.query(
-      `SELECT COUNT(*)::int AS n FROM tienda WHERE activo = TRUE${idCategoria ? " AND idcategoria = $1" : ""}`,
+      `SELECT COUNT(*)::int AS n FROM tienda ${countWhere}`,
       countParams
     );
     return { rows, total: c[0]?.n ?? 0 };
   },
 
-  async create({ idUsuario, idCategoria, nombre, descripcion, direccion, activo = true }, db = pool) {
+  async create({ idUsuario, idCategoria, nombre, descripcion, direccion, logoUrl, bannerUrl, activo = true }, db = pool) {
     const { rows } = await db.query(
-      `INSERT INTO tienda (idusuario, idcategoria, nombre, descripcion, direccion, activo)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO tienda (idusuario, idcategoria, nombre, descripcion, direccion, logourl, bannerurl, activo)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING *`,
-      [idUsuario, idCategoria ?? null, nombre, descripcion ?? null, direccion ?? null, activo]
+      [idUsuario, idCategoria ?? null, nombre, descripcion ?? null, direccion ?? null, logoUrl ?? null, bannerUrl ?? null, activo]
     );
     return rows[0];
   },
@@ -63,6 +78,14 @@ export const tiendaModel = {
     if (data.direccion !== undefined) { // New field
       vals.push(data.direccion);
       fields.push(`direccion = $${i++}`);
+    }
+    if (data.logoUrl !== undefined) {
+      vals.push(data.logoUrl);
+      fields.push(`logourl = $${i++}`);
+    }
+    if (data.bannerUrl !== undefined) {
+      vals.push(data.bannerUrl);
+      fields.push(`bannerurl = $${i++}`);
     }
     if (data.activo != null) {
       vals.push(data.activo);

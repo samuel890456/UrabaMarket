@@ -9,6 +9,9 @@ export const registerSchema = z.discriminatedUnion("rol", [
     password: z.string().min(6, "Mínimo 6 caracteres").max(255),
     telefono: z.string().max(20).optional().nullable(),
     rol: z.literal("Cliente"),
+    direccion: z.string().min(1).max(255).optional(),
+    ciudad: z.string().max(100).optional(),
+    esPrincipal: z.boolean().optional(),
   }),
   z.object({
     nombre: z.string().min(1, "Nombre del vendedor requerido").max(100),

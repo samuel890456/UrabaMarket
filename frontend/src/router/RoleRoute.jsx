@@ -1,6 +1,6 @@
 import { Navigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
-import { ROLE_HOME } from "../config/nav";
+import { hasAnyRole, homeForUser } from "../utils/rbac";
 
 export function RoleRoute({ roles, children }) {
   const user = useAuthStore((s) => s.user);
@@ -9,8 +9,8 @@ export function RoleRoute({ roles, children }) {
     return <Navigate to="/login" replace />;
   }
 
-  if (!roles.includes(user.rol)) {
-    const fallback = ROLE_HOME[user.rol] || "/";
+  if (!hasAnyRole(user, roles)) {
+    const fallback = homeForUser(user);
     return <Navigate to={fallback} replace />;
   }
 

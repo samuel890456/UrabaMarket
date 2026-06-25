@@ -5,7 +5,6 @@ import { z } from "zod";
 import { toast } from "sonner";
 import { login } from "../../services/api/auth.api";
 import { useAuthStore } from "../../store/authStore";
-import { ROLE_HOME } from "../../config/nav";
 import { Input } from "../../components/ui/Input";
 import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
@@ -19,7 +18,7 @@ export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const setAuth = useAuthStore((s) => s.setAuth);
-  const from = location.state?.from?.pathname || "/";
+  const from = location.state?.from?.pathname;
 
   const {
     register,
@@ -32,8 +31,7 @@ export function LoginPage() {
       const { token, user } = await login(values);
       setAuth(token, user);
       toast.success(`Hola, ${user.nombre}`);
-      const home = ROLE_HOME[user.rol] || from;
-      navigate(home, { replace: true });
+      navigate(from && from !== "/login" ? from : "/", { replace: true });
     } catch (e) {
       toast.error(e.response?.data?.message || "Credenciales inválidas");
     }
@@ -58,7 +56,7 @@ export function LoginPage() {
         </form>
         <p className="mt-6 text-center text-sm text-slate-500">
           ¿No tienes cuenta?{" "}
-          <Link to="/registro" className="font-medium text-brand-700 hover:underline">
+          <Link to="/register" className="font-medium text-brand-700 hover:underline">
             Regístrate
           </Link>
         </p>

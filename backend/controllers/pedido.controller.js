@@ -1,4 +1,5 @@
 import { tiendaModel } from "../models/tienda.model.js";
+import { hasRole } from "../middlewares/auth.js";
 import * as pedidoService from "../services/pedido.service.js";
 
 export async function checkout(req, res) {
@@ -22,12 +23,12 @@ export async function listTienda(req, res) {
 
 export async function getById(req, res) {
   let idTiendaVendedor = null;
-  if (req.user.rol === "Vendedor") {
+  if (hasRole(req.user, "Vendedor")) {
     const tienda = await tiendaModel.findByUsuario(req.user.idUsuario);
     idTiendaVendedor = tienda ? tienda.idtienda : null;
   }
   const data = await pedidoService.getById(req.user.idUsuario, Number(req.params.idPedido), {
-    esAdmin: req.user.rol === "Administrador",
+    esAdmin: hasRole(req.user, "Administrador"),
     idTiendaVendedor
   });
   res.json({ ok: true, data });
@@ -38,7 +39,7 @@ export async function updateEstado(req, res) {
     Number(req.params.idPedido),
     req.body.estado,
     req.user.idUsuario, // Pass idUsuario
-    req.user.rol // Pass rol
+    req.user.roles
   );
   res.json({ ok: true, data });
 }

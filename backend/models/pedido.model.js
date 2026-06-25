@@ -26,7 +26,17 @@ export const pedidoModel = {
   },
 
   async findById(idPedido, db = pool) {
-    const { rows } = await db.query(`SELECT * FROM pedido WHERE idpedido = $1`, [idPedido]);
+    const { rows } = await db.query(
+      `SELECT
+          p.*,
+          u.nombre AS nombre_cliente,
+          u.email AS email_cliente,
+          u.telefono AS telefono_cliente
+       FROM pedido p
+       LEFT JOIN usuario u ON u.idusuario = p.idusuario
+       WHERE p.idpedido = $1`,
+      [idPedido]
+    );
     return rows[0] ?? null;
   },
 
@@ -79,7 +89,7 @@ export const pedidoModel = {
 
   async getStoreFinancialSummary(idTienda, { fechaInicio, fechaFin }, db = pool) {
     const params = [idTienda];
-    const parts = [`dp.idtienda = $1`];
+    const parts = [`dp.idtienda = $1`, `p.estado <> 'Cancelado'::tipo_estado_pedido`];
     let n = 2;
 
     if (fechaInicio) {
@@ -97,13 +107,80 @@ export const pedidoModel = {
       `SELECT
           COUNT(DISTINCT p.idpedido)::int AS total_ventas_count,
           COALESCE(SUM(dp.cantidad * dp.preciounitario), 0)::numeric AS total_ingresos,
-          COALESCE(SUM(dp.ganancia), 0)::numeric AS total_ganancias
+          COALESCE(SUM(COALESCE(dp.ganancia, 0) * dp.cantidad), 0)::numeric AS total_ganancias
        FROM detallepedido dp
        INNER JOIN pedido p ON dp.idpedido = p.idpedido
        WHERE ${where}`,
       params
     );
     return rows[0] ?? { total_ventas_count: 0, total_ingresos: 0, total_ganancias: 0 };
+  },
+
+  async getStoreFinancialDashboard(idTienda, { fechaInicio, fechaFin }, db = pool) {
+    const params = [idTienda];
+    const parts = [`dp.idtienda = $1`, `p.estado <> 'Cancelado'::tipo_estado_pedido`];
+    let n = 2;
+
+    if (fechaInicio) {
+      parts.push(`p.fecha >= $${n++}`);
+      params.push(fechaInicio);
+    }
+    if (fechaFin) {
+      parts.push(`p.fecha <= $${n++}`);
+      params.push(fechaFin);
+    }
+
+    const where = parts.join(" AND ");
+
+    const { rows: summaryRows } = await db.query(
+      `SELECT
+          COUNT(DISTINCT p.idpedido)::int AS total_ventas_count,
+          COALESCE(SUM(dp.cantidad * dp.preciounitario), 0)::numeric AS total_ingresos,
+          COALESCE(SUM(COALESCE(dp.ganancia, 0) * dp.cantidad), 0)::numeric AS total_ganancias,
+          COALESCE(SUM(dp.cantidad), 0)::int AS unidades_vendidas,
+          CASE WHEN COUNT(DISTINCT p.idpedido) > 0
+            THEN COALESCE(SUM(dp.cantidad * dp.preciounitario), 0) / COUNT(DISTINCT p.idpedido)
+            ELSE 0
+          END::numeric AS ticket_promedio
+       FROM detallepedido dp
+       INNER JOIN pedido p ON dp.idpedido = p.idpedido
+       WHERE ${where}`,
+      params
+    );
+
+    const { rows: byDate } = await db.query(
+      `SELECT DATE(p.fecha) AS fecha,
+              COALESCE(SUM(dp.cantidad * dp.preciounitario), 0)::numeric AS ingresos,
+              COUNT(DISTINCT p.idpedido)::int AS pedidos
+       FROM detallepedido dp
+       INNER JOIN pedido p ON dp.idpedido = p.idpedido
+       WHERE ${where}
+       GROUP BY DATE(p.fecha)
+       ORDER BY fecha ASC`,
+      params
+    );
+
+    const whereTop = where.replaceAll("p.fecha", "pe.fecha").replaceAll("p.estado", "pe.estado");
+
+    const { rows: topProducts } = await db.query(
+      `SELECT prod.idproducto, prod.nombre,
+              COALESCE(SUM(dp.cantidad), 0)::int AS unidades,
+              COALESCE(SUM(dp.cantidad * dp.preciounitario), 0)::numeric AS ingresos
+       FROM detallepedido dp
+       INNER JOIN pedido pe ON dp.idpedido = pe.idpedido
+       INNER JOIN producto prod ON prod.idproducto = dp.idproducto
+       WHERE ${whereTop}
+       GROUP BY prod.idproducto, prod.nombre
+       ORDER BY unidades DESC, ingresos DESC
+       LIMIT 5`,
+      params
+    );
+
+    return {
+      summary: summaryRows[0] ?? {},
+      byDate,
+      topProducts
+    };
   },
 
   async findByIdAdmin(idPedido, db = pool) {
@@ -113,7 +190,7 @@ export const pedidoModel = {
           u.nombre AS nombre_usuario,
           u.email AS email_usuario,
           COALESCE(SUM(dp.cantidad * dp.preciounitario), 0)::numeric AS subtotal_pedido,
-          COALESCE(SUM(dp.ganancia), 0)::numeric AS ganancia_pedido,
+          COALESCE(SUM(COALESCE(dp.ganancia, 0) * dp.cantidad), 0)::numeric AS ganancia_pedido,
           json_agg(json_build_object(
               'idDetalle', dp.idDetalle,
               'idProducto', dp.idProducto,

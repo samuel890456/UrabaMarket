@@ -1,5 +1,7 @@
 import { Link } from "react-router-dom";
 import { MapPin, Package, ShoppingCart } from "lucide-react";
+import { Button } from "../../components/ui/Button";
+import { Breadcrumbs } from "../../components/ui/Breadcrumbs";
 import { Card } from "../../components/ui/Card";
 
 const cards = [
@@ -11,8 +13,19 @@ const cards = [
 export function DashboardClientePage() {
   return (
     <div className="animate-fade-in">
-      <h2 className="text-2xl font-bold text-ink">Bienvenido</h2>
-      <p className="mt-1 text-slate-600">Gestiona tus compras en un solo lugar.</p>
+      <Breadcrumbs items={[{ to: "/cliente", label: "Cliente" }, { label: "Inicio" }]} />
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-ink">Bienvenido</h2>
+          <p className="mt-1 text-slate-600">Gestiona tus compras en un solo lugar.</p>
+        </div>
+        <Link to="/productos">
+          <Button size="sm">
+            <ShoppingCart className="mr-2 h-4 w-4" />
+            Seguir comprando
+          </Button>
+        </Link>
+      </div>
       <div className="mt-8 grid gap-4 sm:grid-cols-3">
         {cards.map(({ to, title, desc, icon: Icon }) => (
           <Link key={to} to={to}>

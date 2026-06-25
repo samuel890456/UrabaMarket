@@ -4,6 +4,7 @@ import { env } from "../config/env.js";
 import { usuarioModel } from "../models/usuario.model.js";
 import { tiendaModel } from "../models/tienda.model.js"; // Importar tiendaModel
 import { proveedorModel } from "../models/proveedor.model.js"; // Importar proveedorModel
+import { direccionModel } from "../models/direccion.model.js";
 import { ApiError } from "../utils/ApiError.js";
 import { mapUsuario } from "../utils/mappers.js";
 import { signUserToken } from "../utils/jwt.js";
@@ -31,14 +32,17 @@ export async function register(body) { // Accept full body
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
-    const row = await usuarioModel.create({
+    const created = await usuarioModel.create({
       nombre: nombreParaUsuario, // Use the mapped name
       email,
       password: passwordHash,
-      telefono: telefono ?? null,
-      rol
+      telefono: telefono ?? null
     }, client);
-    const user = mapUsuario(row);
+    const assignedRole = await usuarioModel.addRoleByName(created.idusuario, rol, client);
+    if (!assignedRole) {
+      throw new ApiError.BadRequest(`Rol no configurado: ${rol}`);
+    }
+    const user = mapUsuario(await usuarioModel.findById(created.idusuario, client));
 
     if (rol === "Vendedor") {
       const { nombreTienda, categoriaTienda, direccionTienda } = body;
@@ -60,13 +64,20 @@ export async function register(body) { // Accept full body
         nombreEmpresa,
         productosQueDistribuye,
       }, client);
+    } else if (rol === "Cliente" && body.direccion) {
+      await direccionModel.create({
+        idUsuario: user.idUsuario,
+        direccion: body.direccion,
+        ciudad: body.ciudad || "Apartadó",
+        esPrincipal: body.esPrincipal ?? true
+      }, client);
     }
 
     await client.query("COMMIT");
     const token = signUserToken({
       idUsuario: user.idUsuario,
       email: user.email,
-      rol: user.rol
+      roles: user.roles
     });
     return { user, token };
   } catch (error) {
@@ -93,7 +104,7 @@ export async function login({ email, password }) {
   const token = signUserToken({
     idUsuario: user.idUsuario,
     email: user.email,
-    rol: user.rol
+    roles: user.roles
   });
   return { user, token };
 }

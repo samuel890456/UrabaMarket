@@ -17,7 +17,7 @@ export async function listMineProveedor(req, res) {
 
 export async function getById(req, res) {
   const data = await compraProveedorService.getById(Number(req.params.idCompra), req.user.idUsuario, {
-    rol: req.user.rol
+    roles: req.user.roles
   });
   res.json({ ok: true, data });
 }
@@ -27,7 +27,7 @@ export async function updateEstado(req, res) {
     Number(req.params.idCompra),
     req.body.estado,
     req.user.idUsuario,
-    { rol: req.user.rol }
+    { roles: req.user.roles }
   );
   res.json({ ok: true, data });
 }

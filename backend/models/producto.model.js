@@ -50,7 +50,7 @@ export const productoModel = {
     return rows;
   },
 
-  async search({ q, idCategoria, marca, minPrecio, maxPrecio, sortBy = 'idProducto', sortOrder = 'DESC', limit, offset }, db = pool) {
+  async search({ q, idCategoria, idTienda, idProveedor, marca, minPrecio, maxPrecio, sortBy = 'idProducto', sortOrder = 'DESC', limit, offset }, db = pool) {
     const precioColumn = await getPrecioColumn(db);
     const parts = [`p.activo = TRUE`];
     const params = [];
@@ -67,6 +67,14 @@ export const productoModel = {
     if (idCategoria) {
       params.push(idCategoria);
       parts.push(`p.idcategoria = $${n++}`);
+    }
+    if (idTienda) {
+      params.push(idTienda);
+      parts.push(`p.idtienda = $${n++}`);
+    }
+    if (idProveedor) {
+      params.push(idProveedor);
+      parts.push(`p.idproveedor = $${n++}`);
     }
 
     // New filters
@@ -103,7 +111,12 @@ export const productoModel = {
     const off = n + 1;
 
     const { rows } = await db.query(
-      `SELECT p.* FROM producto p WHERE ${where} ORDER BY ${orderByClause} ${finalSortOrder} LIMIT $${lim} OFFSET $${off}`,
+      `SELECT p.*, t.nombre AS nombre_tienda
+       FROM producto p
+       LEFT JOIN tienda t ON t.idtienda = p.idtienda
+       WHERE ${where}
+       ORDER BY ${orderByClause} ${finalSortOrder}
+       LIMIT $${lim} OFFSET $${off}`,
       params
     );
     const countParams = params.slice(0, -2);
@@ -194,7 +207,7 @@ export const productoModel = {
     const { rows } = await db.query(
       `UPDATE producto SET stock = stock + $2, updatedat = CURRENT_TIMESTAMP
        WHERE idproducto = $1 AND stock + $2 >= 0
-       RETURNING *`,
+       RETURNING *, stock - $2 AS stock_anterior`,
       [idProducto, delta]
     );
     return rows[0] ?? null;

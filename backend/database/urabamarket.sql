@@ -5,7 +5,6 @@
 -- Conectarse a la base urabamarket antes de ejecutar el resto del script.
 
 -- 1. TIPOS ENUM (PostgreSQL requiere crear los tipos explícitamente)
-CREATE TYPE tipo_rol AS ENUM ('Cliente', 'Vendedor', 'Proveedor', 'Administrador');
 CREATE TYPE tipo_estado_carrito AS ENUM ('Activo', 'Comprado', 'Abandonado');
 CREATE TYPE tipo_estado_pedido AS ENUM ('Pendiente', 'Pagado', 'En Proceso', 'Completado', 'Cancelado');
 CREATE TYPE tipo_metodo_pago AS ENUM ('Tarjeta', 'Transferencia', 'Efectivo', 'PSE');
@@ -28,11 +27,32 @@ CREATE TABLE Usuario (
     email VARCHAR(100) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
     telefono VARCHAR(20),
-    rol tipo_rol NOT NULL,
+    avatarUrl VARCHAR(255),
     activo BOOLEAN DEFAULT TRUE,
     createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE Rol (
+    idRol SERIAL PRIMARY KEY,
+    nombre VARCHAR(50) NOT NULL UNIQUE,
+    descripcion TEXT
+);
+
+CREATE TABLE UsuarioRol (
+    idUsuario INT NOT NULL,
+    idRol INT NOT NULL,
+    PRIMARY KEY (idUsuario, idRol),
+    CONSTRAINT fk_usuario_rol_usuario FOREIGN KEY (idUsuario) REFERENCES Usuario(idUsuario) ON DELETE CASCADE,
+    CONSTRAINT fk_usuario_rol_rol FOREIGN KEY (idRol) REFERENCES Rol(idRol) ON DELETE CASCADE
+);
+
+INSERT INTO Rol (nombre, descripcion) VALUES
+('Cliente', 'Compra productos en el marketplace'),
+('Vendedor', 'Administra tienda, productos y ventas'),
+('Proveedor', 'Gestiona catalogo mayorista B2B'),
+('Administrador', 'Administra la plataforma')
+ON CONFLICT (nombre) DO NOTHING;
 
 -- 4. DIRECCIONES
 CREATE TABLE Direccion (
@@ -54,6 +74,8 @@ CREATE TABLE Tienda (
     nombre VARCHAR(150) NOT NULL,
     descripcion TEXT,
     direccion VARCHAR(255), -- Nueva columna
+    logoUrl VARCHAR(255),
+    bannerUrl VARCHAR(255),
     activo BOOLEAN DEFAULT TRUE,
     createdAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updatedAt TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

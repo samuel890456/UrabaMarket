@@ -1,11 +1,15 @@
 import { Link, NavLink, Outlet } from "react-router-dom";
 import { cn } from "../../utils/cn";
-import { LogOut, Store } from "lucide-react";
+import { LogOut, ShoppingCart, Store } from "lucide-react";
 import { Button } from "../ui/Button";
 import { useAuthStore } from "../../store/authStore";
+import { useCartStore } from "../../store/cartStore";
+import { hasRole, rolesOf } from "../../utils/rbac";
 
 export function AppShell({ navItems, title }) {
   const { user, logout } = useAuthStore();
+  const cartCount = useCartStore((state) => state.count);
+  const roleLabel = rolesOf(user).join(" + ");
 
   return (
     <div className="min-h-screen bg-surface">
@@ -39,7 +43,7 @@ export function AppShell({ navItems, title }) {
         </nav>
         <div className="border-t border-slate-100 p-4">
           <p className="truncate text-xs text-slate-500">{user?.email}</p>
-          <p className="text-xs font-medium text-brand-700">{user?.rol}</p>
+          <p className="text-xs font-medium text-brand-700">{roleLabel}</p>
           <Button variant="outline" size="sm" className="mt-3 w-full" onClick={() => logout()}>
             <LogOut className="mr-2 h-4 w-4" />
             Cerrar sesión
@@ -49,9 +53,20 @@ export function AppShell({ navItems, title }) {
 
       <div className="lg:pl-64">
         <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-slate-200/80 bg-white/90 px-4 backdrop-blur lg:px-8">
-          <h1 className="text-lg font-semibold text-ink">{title}</h1>
-          <Link to="/" className="text-sm text-slate-500 hover:text-brand-700 lg:hidden">
-            Ir al sitio
+          <div className="flex items-center gap-3">
+            <h1 className="text-lg font-semibold text-ink">{title}</h1>
+            {hasRole(user, "Cliente") ? (
+              <Link
+                to="/cliente/carrito"
+                className="hidden items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm transition-colors hover:border-brand-300 hover:text-brand-700 lg:flex"
+              >
+                <ShoppingCart className="h-4 w-4" />
+                {cartCount ? `${cartCount} item${cartCount === 1 ? "" : "s"}` : "Carrito"}
+              </Link>
+            ) : null}
+          </div>
+          <Link to="/productos" className="text-sm text-slate-500 hover:text-brand-700 lg:hidden">
+            Ir al catálogo
           </Link>
         </header>
         <nav className="flex gap-1 overflow-x-auto border-b border-slate-100 bg-white px-3 py-2 lg:hidden">

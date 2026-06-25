@@ -10,6 +10,15 @@ export async function listTiendas(req, res) {
   res.json({ ok: true, data });
 }
 
+export async function getStoreDetailsAdmin(req, res) {
+  const idTienda = Number(req.params.idTienda);
+  if (!Number.isInteger(idTienda) || idTienda <= 0) {
+    return res.status(400).json({ ok: false, message: "ID de tienda invalido." });
+  }
+  const data = await adminService.getStoreByIdAdmin(idTienda);
+  res.json({ ok: true, data });
+}
+
 export async function listProductos(req, res) {
   const data = await adminService.listProductosAdmin(req.query);
   res.json({ ok: true, data });

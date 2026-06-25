@@ -1,6 +1,8 @@
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { getPedidos } from "../../services/api/cliente.api";
+import { Breadcrumbs } from "../../components/ui/Breadcrumbs";
+import { Button } from "../../components/ui/Button";
 import { Card } from "../../components/ui/Card";
 import { Loader } from "../../components/Loader";
 import { EmptyState } from "../../components/EmptyState";
@@ -15,17 +17,34 @@ export function PedidosClientePage() {
 
   if (!items.length) {
     return (
-      <EmptyState
-        icon={Package}
-        title="Sin pedidos aún"
-        description="Cuando compres, verás el historial aquí."
-      />
+      <div className="max-w-3xl animate-fade-in">
+        <Breadcrumbs items={[{ to: "/cliente", label: "Cliente" }, { label: "Mis pedidos" }]} />
+        <EmptyState
+          icon={Package}
+          title="Sin pedidos aún"
+          description="Cuando compres, verás el historial aquí."
+        >
+          <Link to="/productos">
+            <Button>Seguir comprando</Button>
+          </Link>
+        </EmptyState>
+      </div>
     );
   }
 
   return (
     <div className="max-w-3xl animate-fade-in">
-      <h2 className="text-2xl font-bold text-ink">Mis pedidos</h2>
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <Breadcrumbs items={[{ to: "/cliente", label: "Cliente" }, { label: "Mis pedidos" }]} />
+          <h2 className="text-2xl font-bold text-ink">Mis pedidos</h2>
+        </div>
+        <Link to="/productos">
+          <Button variant="outline" size="sm">
+            Seguir comprando
+          </Button>
+        </Link>
+      </div>
       <div className="mt-6 space-y-3">
         {items.map((p) => (
           <Link key={p.idPedido} to={`/cliente/pedidos/${p.idPedido}`}>

@@ -6,6 +6,7 @@ import { Button } from "../../components/ui/Button";
 import { Loader } from "../../components/Loader";
 import { EmptyState } from "../../components/EmptyState";
 import { Truck } from "lucide-react";
+import { Link } from "react-router-dom";
 
 export function ComprasB2BPage() {
   const qc = useQueryClient();
@@ -26,6 +27,21 @@ export function ComprasB2BPage() {
   if (isLoading) return <Loader />;
 
   const items = data ?? [];
+  const getAvailableActions = (estado) => {
+    if (estado === "Pendiente") {
+      return [
+        { label: "Aceptar", estado: "Aceptado" },
+        { label: "Rechazar", estado: "Rechazado", variant: "ghost" }
+      ];
+    }
+    if (estado === "Aceptado") {
+      return [
+        { label: "Marcar enviado", estado: "Enviado", variant: "outline" },
+        { label: "Cancelar", estado: "Cancelado", variant: "ghost" }
+      ];
+    }
+    return [];
+  };
 
   if (!items.length) {
     return (
@@ -47,30 +63,30 @@ export function ComprasB2BPage() {
               <div>
                 <p className="font-medium">Compra #{c.idCompra}</p>
                 <p className="text-sm text-slate-500">
+                  {c.nombreTienda ? `${c.nombreTienda} · ` : ""}
                   {c.fecha ? new Date(c.fecha).toLocaleString("es-CO") : ""} · $
                   {Number(c.total).toLocaleString("es-CO")}
                 </p>
                 <p className="mt-1 text-xs font-medium text-brand-800">{c.estado}</p>
               </div>
               <div className="flex flex-wrap gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  type="button"
-                  disabled={mutation.isPending}
-                  onClick={() => mutation.mutate({ id: c.idCompra, estado: "Recibido" })}
-                >
-                  Marcar recibido
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  type="button"
-                  disabled={mutation.isPending}
-                  onClick={() => mutation.mutate({ id: c.idCompra, estado: "Cancelado" })}
-                >
-                  Cancelar
-                </Button>
+                <Link to={`/proveedor/compras-b2b/${c.idCompra}`}>
+                  <Button size="sm" variant="outline" type="button">
+                    Ver detalle
+                  </Button>
+                </Link>
+                {getAvailableActions(c.estado).map((action) => (
+                  <Button
+                    key={action.estado}
+                    size="sm"
+                    variant={action.variant}
+                    type="button"
+                    disabled={mutation.isPending}
+                    onClick={() => mutation.mutate({ id: c.idCompra, estado: action.estado })}
+                  >
+                    {action.label}
+                  </Button>
+                ))}
               </div>
             </div>
           </Card>

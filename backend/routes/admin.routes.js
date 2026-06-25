@@ -9,6 +9,7 @@ adminRouter.use(authenticate, authorize("Administrador"));
 
 adminRouter.get("/estadisticas", asyncHandler(adminController.estadisticas));
 adminRouter.get("/tiendas", asyncHandler(adminController.listTiendas));
+adminRouter.get("/tiendas/:idTienda", asyncHandler(adminController.getStoreDetailsAdmin));
 adminRouter.get("/productos", asyncHandler(adminController.listProductos));
 adminRouter.get("/pedidos", asyncHandler(adminController.listPedidos));
 adminRouter.get("/pedidos/:idPedido", asyncHandler(adminController.getOrderDetailsAdmin));

@@ -14,12 +14,20 @@ function mapDates(row, keys = ["createdat", "updatedat"]) {
 export function mapUsuario(row, { includePassword = false } = {}) {
   if (!row) return null;
   const idUsuario = row.idusuario ?? row.idUsuario;
+  const roles = Array.isArray(row.roles)
+    ? row.roles.filter(Boolean)
+    : row.roles
+      ? String(row.roles).split(",").map((r) => r.trim()).filter(Boolean)
+      : [];
   const base = {
     idUsuario,
     nombre: row.nombre,
     email: row.email,
     telefono: row.telefono,
-    rol: row.rol,
+    avatarUrl: row.avatarurl ?? row.avatarUrl ?? null,
+    fotoPerfil: row.avatarurl ?? row.avatarUrl ?? null,
+    roles,
+    primaryRole: row.primaryrole ?? row.primaryRole ?? roles[0] ?? null,
     activo: row.activo,
     createdAt: row.createdat ?? row.createdAt,
     updatedAt: row.updatedat ?? row.updatedAt
@@ -34,6 +42,9 @@ export function mapCategoria(row) {
     idCategoria: row.idcategoria ?? row.idCategoria,
     nombre: row.nombre,
     descripcion: row.descripcion,
+    direccion: row.direccion,
+    logoUrl: row.logourl ?? row.logoUrl ?? null,
+    bannerUrl: row.bannerurl ?? row.bannerUrl ?? null,
     activo: row.activo,
     createdAt: row.createdat ?? row.createdAt,
     updatedAt: row.updatedat ?? row.updatedAt
@@ -61,6 +72,9 @@ export function mapTienda(row) {
     idCategoria: row.idcategoria ?? row.idCategoria,
     nombre: row.nombre,
     descripcion: row.descripcion,
+    direccion: row.direccion,
+    logoUrl: row.logourl ?? row.logoUrl ?? null,
+    bannerUrl: row.bannerurl ?? row.bannerUrl ?? null,
     activo: row.activo,
     createdAt: row.createdat ?? row.createdAt,
     updatedAt: row.updatedat ?? row.updatedAt
@@ -88,6 +102,7 @@ export function mapProducto(row) {
     promociones: row.promociones,
     descuento: row.descuento != null ? Number(row.descuento) : null,
     visitas: row.visitas,
+    nombreTienda: row.nombre_tienda ?? row.nombreTienda,
     imagenPrincipal: row.imagenprincipal ?? row.imagenPrincipal,
     activo: row.activo,
     createdAt: row.createdat ?? row.createdAt,
@@ -125,7 +140,14 @@ export function mapPedido(row) {
     idDireccionEnvio: row.iddireccionenvio ?? row.idDireccionEnvio,
     fecha: row.fecha,
     estado: row.estado,
-    total: row.total != null ? Number(row.total) : null
+    total: row.total != null ? Number(row.total) : null,
+    cliente: row.nombre_cliente || row.email_cliente || row.telefono_cliente
+      ? {
+          nombre: row.nombre_cliente ?? null,
+          email: row.email_cliente ?? null,
+          telefono: row.telefono_cliente ?? null
+        }
+      : null
   };
 }
 

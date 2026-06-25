@@ -24,8 +24,9 @@ export async function updateMe(idUsuario, data) {
 export async function listUsuarios(query) {
   const { page, limit, offset } = parsePagination(query);
   const rol = query.rol ?? null;
-  const total = await usuarioModel.count(rol);
-  const rows = await usuarioModel.list({ limit, offset, rol });
+  const q = query.q?.trim() || null;
+  const total = await usuarioModel.count(rol, q);
+  const rows = await usuarioModel.list({ limit, offset, rol, q });
   return {
     items: rows.map((r) => mapUsuario(r)),
     meta: paginationMeta({ page, limit, total })

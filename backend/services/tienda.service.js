@@ -7,7 +7,8 @@ import { paginationMeta, parsePagination } from "../utils/pagination.js";
 export async function listPublicas(query) {
   const { page, limit, offset } = parsePagination(query);
   const idCategoria = query.idCategoria ? Number(query.idCategoria) : null;
-  const { rows, total } = await tiendaModel.listPublic({ limit, offset, idCategoria });
+  const q = query.q?.trim() || null;
+  const { rows, total } = await tiendaModel.listPublic({ limit, offset, idCategoria, q });
   return {
     items: rows.map(mapTienda),
     meta: paginationMeta({ page, limit, total })
@@ -55,10 +56,24 @@ export async function getOwnFinancialSummary(idUsuario, { fechaInicio, fechaFin 
   if (!tienda) {
     throw new ApiError.Forbidden("No tienes una tienda asociada para obtener un resumen financiero.");
   }
-  const summary = await pedidoModel.getStoreFinancialSummary(tienda.idtienda, { fechaInicio, fechaFin });
+  const dashboard = await pedidoModel.getStoreFinancialDashboard(tienda.idtienda, { fechaInicio, fechaFin });
+  const summary = dashboard.summary ?? {};
   return {
     totalVentasCount: Number(summary.total_ventas_count),
     totalIngresos: Number(summary.total_ingresos),
-    totalGanancias: Number(summary.total_ganancias)
+    totalGanancias: Number(summary.total_ganancias),
+    unidadesVendidas: Number(summary.unidades_vendidas),
+    ticketPromedio: Number(summary.ticket_promedio),
+    byDate: (dashboard.byDate ?? []).map((item) => ({
+      fecha: item.fecha,
+      ingresos: Number(item.ingresos),
+      pedidos: Number(item.pedidos)
+    })),
+    topProducts: (dashboard.topProducts ?? []).map((item) => ({
+      idProducto: item.idproducto,
+      nombre: item.nombre,
+      unidades: Number(item.unidades),
+      ingresos: Number(item.ingresos)
+    }))
   };
 }

@@ -1,5 +1,7 @@
 import { cva } from "class-variance-authority";
 import { cn } from "../../utils/cn";
+import { Slot } from "@radix-ui/react-slot"; // Import Slot
+import React from "react"; // Explicitly import React
 
 const variants = cva(
   "inline-flex items-center justify-center rounded-xl font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 active:scale-[0.98]",
@@ -26,6 +28,8 @@ const variants = cva(
   }
 );
 
-export function Button({ className, variant, size, type = "button", ...props }) {
-  return <button type={type} className={cn(variants({ variant, size }), className)} {...props} />;
+// Accept asChild prop
+export function Button({ className, variant, size, type = "button", asChild = false, ...props }) {
+  const Comp = asChild ? Slot : "button"; // Determine which component to render
+  return <Comp type={type} className={cn(variants({ variant, size }), className)} {...props} />;
 }

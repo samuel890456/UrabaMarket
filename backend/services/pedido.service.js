@@ -1,6 +1,7 @@
 import { pool } from "../config/database.js";
 import { carritoModel } from "../models/carrito.model.js";
 import { direccionModel } from "../models/direccion.model.js";
+import { inventarioModel } from "../models/inventario.model.js";
 import { pedidoModel } from "../models/pedido.model.js";
 import { productoModel } from "../models/producto.model.js";
 import { tiendaModel } from "../models/tienda.model.js";
@@ -87,6 +88,18 @@ export async function checkout(idUsuario, idDireccionEnvio) {
       if (!updated) {
         throw new ApiError.BadRequest(`No se pudo descontar stock del producto ${producto.nombre}`);
       }
+      await inventarioModel.addMovimiento({
+        idProducto: item.idproducto,
+        idTienda: producto.idtienda,
+        tipo: "SALIDA_VENTA",
+        cantidad: -Number(item.cantidad),
+        stockAnterior: Number(updated.stock_anterior ?? updated.stock + Number(item.cantidad)),
+        stockNuevo: Number(updated.stock),
+        referenciaTipo: "Pedido",
+        referenciaId: idPedido,
+        costoUnitario: producto.preciocosto,
+        nota: "Salida por venta"
+      }, client);
     }
     await carritoModel.updateEstado(carrito.idcarrito, "Comprado", client);
     await client.query("COMMIT");
@@ -145,11 +158,11 @@ export async function listForTienda(idTienda) {
   return rows.map(mapPedido);
 }
 
-export async function updateEstado(idPedido, estado, idUsuario, rol) {
+export async function updateEstado(idPedido, estado, idUsuario, roles = []) {
   const row = await pedidoModel.findById(idPedido);
   if (!row) throw new ApiError.NotFound("Pedido no encontrado");
 
-  if (rol === "Vendedor") {
+  if (roles.includes("Vendedor") && !roles.includes("Administrador")) {
     const tienda = await tiendaModel.findByUsuario(idUsuario);
     if (!tienda) {
       throw new ApiError.Forbidden("No tienes una tienda asociada");
